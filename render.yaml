@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: smarthotel-api
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      # NOTE: These three are not currently read by any code in this backend
+      # (there is no JWT auth wired up in Program.cs). Included only because
+      # they were requested — safe to set, but they have no effect today.
+      - key: JWT__Key
+        sync: false
+      - key: JWT__Issuer
+        sync: false
+      - key: JWT__Audience
+        sync: false
