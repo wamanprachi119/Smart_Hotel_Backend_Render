@@ -68,23 +68,18 @@ var app = builder.Build();
 // Database test
 using (var scope = app.Services.CreateScope())
 {
+    var db = scope.ServiceProvider.GetRequiredService<SmartHotelContext>();
+
     try
     {
-        var db = scope.ServiceProvider.GetRequiredService<SmartHotelContext>();
+        Console.WriteLine("Creating database if needed...");
 
-        await db.Database.CanConnectAsync();
+        await db.Database.EnsureCreatedAsync();
 
-        // Uncomment ONE of these depending on your project
-
-        // await db.Database.EnsureCreatedAsync();
-
-        // await db.Database.MigrateAsync();
-
-        Console.WriteLine("✅ MySQL Connected Successfully");
+        Console.WriteLine("Database ready.");
     }
     catch (Exception ex)
     {
-        Console.WriteLine("❌ Database Error");
         Console.WriteLine(ex.ToString());
     }
 }
