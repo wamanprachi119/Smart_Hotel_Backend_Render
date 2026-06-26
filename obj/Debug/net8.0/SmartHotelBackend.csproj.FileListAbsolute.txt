@@ -106,3 +106,4 @@ D:\SmartHotelBackend_Render_Ready\SmartHotelBackend\obj\Debug\net8.0\refint\Smar
 D:\SmartHotelBackend_Render_Ready\SmartHotelBackend\obj\Debug\net8.0\SmartHotelBackend.pdb
 D:\SmartHotelBackend_Render_Ready\SmartHotelBackend\obj\Debug\net8.0\SmartHotelBackend.genruntimeconfig.cache
 D:\SmartHotelBackend_Render_Ready\SmartHotelBackend\obj\Debug\net8.0\ref\SmartHotelBackend.dll
+D:\SmartHotelBackend_Render_Ready\SmartHotelBackend\obj\Debug\net8.0\SmartHotelBackend.sourcelink.json

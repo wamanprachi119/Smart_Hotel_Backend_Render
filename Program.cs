@@ -72,11 +72,11 @@ using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<SmartHotelContext>();
 
-        Console.WriteLine("Applying database migrations...");
+        Console.WriteLine("Applying migrations...");
 
         await db.Database.MigrateAsync();
 
-        Console.WriteLine("✅ Database migrations applied.");
+        Console.WriteLine("✅ Database migrated successfully.");
     }
     catch (Exception ex)
     {
