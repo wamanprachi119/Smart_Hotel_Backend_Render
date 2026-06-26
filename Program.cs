@@ -8,21 +8,13 @@ var builder = WebApplication.CreateBuilder(args);
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
-// Read connection string from Railway Variables first,
-// otherwise use appsettings.json
+// Read connection string
 var connStr = builder.Configuration.GetConnectionString("DefaultConnection");
 
 if (string.IsNullOrWhiteSpace(connStr))
 {
-    throw new Exception("DefaultConnection connection string not found.");
+    throw new Exception("ConnectionStrings:DefaultConnection not found.");
 }
-
-Console.WriteLine("========== DATABASE ==========");
-Console.WriteLine(connStr.Replace(
-    connStr.Split("Password=")[1].Split(';')[0],
-    "********"));
-Console.WriteLine("==============================");
-
 
 // Print connection string (hide password)
 Console.WriteLine("========== DATABASE ==========");
@@ -31,19 +23,22 @@ Console.WriteLine(connStr.Replace(
     "********"));
 Console.WriteLine("==============================");
 
+// Configure EF Core
 builder.Services.AddDbContext<SmartHotelContext>(options =>
 {
     options.UseMySql(
         connStr,
-        ServerVersion.AutoDetect(connStr)
+        new MySqlServerVersion(new Version(8, 0, 36))
     );
 });
 
-builder.Services.AddControllers().AddJsonOptions(options =>
-{
-    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-    options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-});
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.DefaultIgnoreCondition =
+            JsonIgnoreCondition.WhenWritingNull;
+    });
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -51,7 +46,7 @@ builder.Services.AddSwaggerGen();
 // CORS
 var allowedOrigins =
     Environment.GetEnvironmentVariable("ALLOWED_ORIGINS")?
-    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
     ?? new[]
     {
         "http://localhost:5173",
@@ -70,21 +65,22 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Test database connection
+// Database test
 using (var scope = app.Services.CreateScope())
 {
     try
     {
         var db = scope.ServiceProvider.GetRequiredService<SmartHotelContext>();
 
-        if (await db.Database.CanConnectAsync())
-        {
-            Console.WriteLine("✅ MySQL Connected Successfully");
-        }
-        else
-        {
-            Console.WriteLine("❌ MySQL Connection Failed");
-        }
+        await db.Database.CanConnectAsync();
+
+        // Uncomment ONE of these depending on your project
+
+        // await db.Database.EnsureCreatedAsync();
+
+        // await db.Database.MigrateAsync();
+
+        Console.WriteLine("✅ MySQL Connected Successfully");
     }
     catch (Exception ex)
     {
@@ -120,16 +116,15 @@ app.MapGet("/health", async (SmartHotelContext db) =>
         return Results.Ok(new
         {
             status = "ok",
-            database = connected ? "connected" : "disconnected"
+            database = connected
         });
     }
     catch (Exception ex)
     {
-        return Results.Ok(new
-        {
-            status = "error",
-            message = ex.Message
-        });
+        return Results.Problem(
+            detail: ex.ToString(),
+            statusCode: 500
+        );
     }
 });
 
