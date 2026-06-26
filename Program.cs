@@ -10,16 +10,20 @@ builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 // Read connection string from Railway Variables first,
 // otherwise use appsettings.json
-var connStr = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
-
-Console.WriteLine("ENV Connection String:");
-Console.WriteLine(connStr);
+var connStr = builder.Configuration.GetConnectionString("DefaultConnection");
 
 if (string.IsNullOrWhiteSpace(connStr))
 {
-    Console.WriteLine("⚠️ Environment variable not found. Using localhost.");
-    connStr = "Server=localhost;Port=3306;Database=smart_hotel;User=root;Password=root;AllowPublicKeyRetrieval=true;SslMode=None;";
+    throw new Exception("DefaultConnection connection string not found.");
 }
+
+Console.WriteLine("========== DATABASE ==========");
+Console.WriteLine(connStr.Replace(
+    connStr.Split("Password=")[1].Split(';')[0],
+    "********"));
+Console.WriteLine("==============================");
+
+
 // Print connection string (hide password)
 Console.WriteLine("========== DATABASE ==========");
 Console.WriteLine(connStr.Replace(
