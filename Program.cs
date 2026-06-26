@@ -14,7 +14,7 @@ var connStr = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? "Server=localhost;Port=3306;Database=smart_hotel;User=root;Password=root;";
 
 builder.Services.AddDbContext<SmartHotelContext>(options =>
-    options.UseMySql(connStr, ServerVersion.Parse("8.0.0-mysql"))
+options.UseMySql(connStr, ServerVersion.Parse("9.4.0-mysql"))
            .EnableDetailedErrors()
            .EnableSensitiveDataLogging(builder.Environment.IsDevelopment()));
 
