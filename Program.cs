@@ -68,21 +68,23 @@ var app = builder.Build();
 // Database test
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<SmartHotelContext>();
-
     try
     {
-        Console.WriteLine("Creating database if needed...");
+        var db = scope.ServiceProvider.GetRequiredService<SmartHotelContext>();
 
-        await db.Database.EnsureCreatedAsync();
+        Console.WriteLine("Applying database migrations...");
 
-        Console.WriteLine("Database ready.");
+        await db.Database.MigrateAsync();
+
+        Console.WriteLine("✅ Database migrations applied.");
     }
     catch (Exception ex)
     {
+        Console.WriteLine("❌ Migration Error");
         Console.WriteLine(ex.ToString());
     }
 }
+
 
 app.UseSwagger();
 app.UseSwaggerUI();
