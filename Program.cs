@@ -4,19 +4,20 @@ using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Railway injects PORT automatically
+// Railway uses PORT automatically
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
-// Connection string — reads from env var ConnectionStrings__DefaultConnection first,
-// then appsettings.json, then hardcoded local fallback
+// Read connection string from Railway Variables first,
+// otherwise use local appsettings.json
 var connStr = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? "Server=localhost;Port=3306;Database=smart_hotel;User=root;Password=root;";
+    ?? "Server=localhost;Port=3306;Database=smart_hotel;User=root;Password=root;AllowPublicKeyRetrieval=true;SslMode=None;";
 
 builder.Services.AddDbContext<SmartHotelContext>(options =>
-options.UseMySql(connStr, ServerVersion.Parse("9.4.0-mysql"))
-           .EnableDetailedErrors()
-           .EnableSensitiveDataLogging(builder.Environment.IsDevelopment()));
+    options.UseMySql(
+        connStr,
+        ServerVersion.AutoDetect(connStr)
+    ));
 
 builder.Services.AddControllers().AddJsonOptions(opts =>
 {
@@ -25,27 +26,13 @@ builder.Services.AddControllers().AddJsonOptions(opts =>
 });
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new() { Title = "Smart Hotel API", Version = "v1" });
-});
-
-// CORS
-var allowedOriginsEnv = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS");
-var allowedOrigins = !string.IsNullOrWhiteSpace(allowedOriginsEnv)
-    ? allowedOriginsEnv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-    : new[]
-    {
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://smarthotel.vercel.app"
-    };
+builder.Services.AddSwaggerGen();
 
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins(allowedOrigins)
+        policy.AllowAnyOrigin()
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -53,58 +40,55 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Auto-create tables on startup
 using (var scope = app.Services.CreateScope())
 {
     try
     {
         var db = scope.ServiceProvider.GetRequiredService<SmartHotelContext>();
-        var canConnect = await db.Database.CanConnectAsync();
-        if (canConnect)
+
+        if (await db.Database.CanConnectAsync())
         {
-            await db.Database.EnsureCreatedAsync();
-            Console.WriteLine("✅ MySQL connected — tables ready.");
+            Console.WriteLine("✅ Database Connected");
         }
         else
         {
-            Console.WriteLine("⚠️  Cannot connect to MySQL.");
-            Console.WriteLine($"   Connection string: {connStr}");
+            Console.WriteLine("❌ Database Disconnected");
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"⚠️  DB error: {ex.Message}");
-        Console.WriteLine("   App will start — fix DB and restart.");
+        Console.WriteLine(ex.Message);
     }
 }
 
 app.UseSwagger();
-app.UseSwaggerUI(c =>
-{
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Smart Hotel API v1");
-    c.RoutePrefix = "swagger";
-});
+app.UseSwaggerUI();
 
 app.UseCors();
-app.UseAuthorization();
+
 app.MapControllers();
 
-app.MapGet("/", () => Results.Ok(new
-{
-    message = "Smart Hotel Backend Running",
-    status = "ok"
-}));
+app.MapGet("/", () => "Smart Hotel Backend Running");
 
 app.MapGet("/health", async (SmartHotelContext db) =>
 {
     try
     {
-        var canConnect = await db.Database.CanConnectAsync();
-        return Results.Ok(new { status = "ok", database = canConnect ? "connected" : "disconnected" });
+        var connected = await db.Database.CanConnectAsync();
+
+        return Results.Ok(new
+        {
+            status = "ok",
+            database = connected ? "connected" : "disconnected"
+        });
     }
     catch (Exception ex)
     {
-        return Results.Ok(new { status = "degraded", database = "error", error = ex.Message });
+        return Results.Ok(new
+        {
+            status = "error",
+            message = ex.Message
+        });
     }
 });
 
